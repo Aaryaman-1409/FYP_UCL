@@ -1,6 +1,6 @@
 import numpy as np
 
-from bvh import Bvh
+from bvh.bvh import Bvh
 
 
 class BvhLoader:
@@ -63,6 +63,3 @@ class BvhLoader:
         for frame_index in range(self.bvh.nframes):
             rotations = np.append(rotations, np.expand_dims(self.get_rotation(frame_index, canonical), 0), axis=0)
         return rotations
-
-
-bvh = BvhLoader('/home/aaryaman/Downloads/Truebone_Z-OO/Ant/__Attack.bvh')

@@ -1,6 +1,8 @@
 import numpy as np
 
 
+# all transforms assume angles are in radians
+
 def euler_to_quaternion(euler_angles):
     roll = euler_angles[0]
     pitch = euler_angles[1]
