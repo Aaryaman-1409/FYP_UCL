@@ -32,5 +32,4 @@ def get_motion_data(filename, motion_repr='quaternion'):
 
     motion_data = torch.from_numpy(motion_data).permute(1, 2, 0).to(torch.float32)
     motion_data.to(torch.float32)
-    #motion_data.to('cuda')
     return motion_data
