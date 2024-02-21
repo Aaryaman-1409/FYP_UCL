@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="SinMDM" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="SinMDM (2)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="SinMDM" project-jdk-type="Python SDK" />
 </project>
