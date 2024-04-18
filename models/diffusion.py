@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from torch import nn
 
 
 def cosine_noise_schedule(timesteps, s=0.008):
@@ -15,14 +16,16 @@ def cosine_noise_schedule(timesteps, s=0.008):
     return np.clip(betas, a_min=0, a_max=0.999)
 
 
-class Diffusion:
-    def __init__(self, timesteps):
-        self.timesteps = timesteps
-        self.betas = self.to_torch(cosine_noise_schedule(timesteps))
+class Diffusion(nn.Module):
+    def __init__(self, model, timesteps=1000):
+        super().__init__()
+        self.num_timesteps = timesteps
+        self.model = model
+        self.betas = cosine_noise_schedule(timesteps)
 
-        alphas = self.to_torch(1.0 - self.betas)
-        self.alphas_cumprod = self.to_torch(np.cumprod(alphas))
-        self.alphas_cumprod_prev = self.to_torch(np.append(1.0, self.alphas_cumprod[:-1]))
+        alphas = 1.0 - self.betas
+        self.alphas_cumprod = np.cumprod(alphas)
+        self.alphas_cumprod_prev = np.append(1.0, self.alphas_cumprod[:-1])
         self.alphas_cumprod_next = self.to_torch(np.append(self.alphas_cumprod[1:], 0.0))
         self.sqrt_alphas_cumprod = self.to_torch(np.sqrt(self.alphas_cumprod))
         self.sqrt_one_minus_alphas_cumprod = self.to_torch(np.sqrt(1.0 - self.alphas_cumprod))
@@ -31,9 +34,8 @@ class Diffusion:
         self.sqrt_recipm1_alphas_cumprod = self.to_torch(np.sqrt(1.0 / self.alphas_cumprod - 1))
 
         # calculations for posterior q(x_{t-1} | x_t, x_0)
-        self.posterior_variance = self.to_torch((
-                self.betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
-        ))
+        self.posterior_variance = self.betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
+
         # log calculation clipped because the posterior variance is 0 at the
         # beginning of the diffusion chain.
         self.posterior_log_variance_clipped = self.to_torch(np.log(
@@ -47,6 +49,10 @@ class Diffusion:
                 * np.sqrt(alphas)
                 / (1.0 - self.alphas_cumprod)
         ))
+
+        self.alphas_cumprod = self.to_torch(self.alphas_cumprod)
+        self.alphas_cumprod_prev = self.to_torch(self.alphas_cumprod_prev)
+        self.posterior_variance = self.to_torch(self.posterior_variance)
 
     @staticmethod
     def to_torch(arr, device='cuda'):
@@ -66,7 +72,7 @@ class Diffusion:
 
     def p_mean_variance(self, x, t, clip_denoised):
         batch_size = x.shape[0]
-        t_tensor = torch.full((batch_size,), t, dtype=torch.int64, device=self.device)
+        t_tensor = torch.full((batch_size,), t, dtype=torch.int64, device='cuda')
 
         x_recon = self.model(x, t_tensor)
 
@@ -87,7 +93,7 @@ class Diffusion:
         sample_shape = (batch_size, *x_shape)
 
         timesteps = self.num_timesteps
-        res = torch.randn(sample_shape, device=self.device)
+        res = torch.randn(sample_shape, device='cuda')
         for t in reversed(range(0, timesteps)):
             res = self.p_sample(res, t)
         return res
@@ -112,3 +118,12 @@ class Diffusion:
         decoder_nll = decoder_nll.mean(dim=list(range(1, len(x_t.shape)))) / np.log(2.0)
         output = torch.where((t == 0), decoder_nll, kl)
         return output
+
+    def forward(self, x):
+        batch_size = x.shape[0]
+        t = np.random.randint(0, self.num_timesteps)
+        t_tensor = torch.full((batch_size,), t, dtype=torch.int64, device='cuda')
+        noise = torch.randn_like(x)
+        x_noisy = self.q_sample(x_start=x, t=t, noise=noise)
+        x0_recon = self.model(x_noisy, t_tensor)
+        return self.compute_loss(x, x0_recon, t)

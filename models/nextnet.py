@@ -54,6 +54,11 @@ class ConvNextBlock(nn.Module):
 
         self.res_conv = nn.Conv2d(dim, dim_out, 1) if dim != dim_out else nn.Identity()
 
+    def forward(self, x, emb=None):
+        h = self.ds_conv(x)
+        h = self.net(h)
+        return h + self.res_conv(x)
+
 
 class NextNet(nn.Module):
     """
@@ -61,7 +66,7 @@ class NextNet(nn.Module):
     The skip connections are connected similar to a "U-Net" structure (first to last, middle to middle, etc).
     """
 
-    def __init__(self, in_channels=3, out_channels=3, depth=16, filters_per_layer=64, frame_conditioned=False):
+    def __init__(self, in_channels=41, out_channels=41, depth=16, filters_per_layer=64, frame_conditioned=False):
         """
         Args:
             in_channels (int):
@@ -131,6 +136,10 @@ class NextNet(nn.Module):
             residuals.append(x)
 
         for layer in self.layers[math.ceil(self.depth / 2): self.depth]:
+            print(x.shape)
+            print(residuals[-1].shape)
+            print(len(residuals))
+            print("")
             x = torch.cat((x, residuals.pop()), dim=1)
             x = layer(x, embedding)
 
