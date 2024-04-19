@@ -5,7 +5,8 @@ from dataloader.get_motion_data import get_motion_data
 from models.diffusion import Diffusion
 from models.nextnet import NextNet
 
-BATCH_SIZE = 32
+BATCH_SIZE = 64
+MAX_ITER = 50_000
 
 
 def train(model, batch, optimizer, device):
@@ -31,14 +32,12 @@ def main():
     optimizer = optim.Adam(diffusion_model.parameters(), lr=0.001)
 
     # Load your motion data - adjust as necessary for your dataloader
-    filename = sys.argv[1] if len(sys.argv) > 1 else "/home/aaryaman/Developer/Truebone_Z-OO/Ant/__Attack.bvh"
+    filename = sys.argv[1] if len(sys.argv) > 1 else "/home/aaryaman/Developer/Truebone_Z-OO/Spider/__Attack.bvh"
     motion_data = get_motion_data(filename)
-    print(motion_data.shape)
     batch = motion_data.repeat((BATCH_SIZE, 1, 1, 1))
 
     # Training loop
-    num_epochs = 150
-    for epoch in range(num_epochs):
+    for i in range(MAX_ITER):
         train(diffusion_model, batch, optimizer, device)
 
 
