@@ -120,9 +120,10 @@ class Diffusion(nn.Module):
         return output
 
     def forward(self, x):
-        batch_size = x.shape[0]
+        frames = x.shape[2]
+        print(x.shape)
         t = np.random.randint(0, self.num_timesteps)
-        t_tensor = torch.full((batch_size,), t, dtype=torch.int64, device='cuda')
+        t_tensor = torch.full((frames,), t, dtype=torch.int64, device='cuda')
         noise = torch.randn_like(x)
         x_noisy = self.q_sample(x_start=x, t=t, noise=noise)
         x0_recon = self.model(x_noisy, t_tensor)
